@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	bind2 "github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
@@ -52,22 +51,19 @@ func main() {
 	contract := Storage{*storageABI}
 	instance := contract.Instance(conn, address)
 
+	// Create an authorized transactor
 	auth := bind2.NewKeyedTransactor(key.PrivateKey, chainID)
 
+	// send a transaction which calls the store function
 	tx, err := bind2.Transact(instance, auth, contract.PackStore(big.NewInt(42069)))
 	if err != nil {
 		log.Crit("failed to submit transaction", "error", err)
 	}
 
+	// wait for transaction inclusion
 	if _, err := bind2.WaitMined(context.Background(), conn, tx.Hash()); err != nil {
 		log.Crit("error waiting for tx inclusion", "error", err)
 	}
 
-	// perform an eth_call on the pending contract
-	val, err := bind2.Call(instance, nil, contract.PackRetrieve(), contract.UnpackRetrieve)
-	if err != nil {
-		log.Crit("call returned error", "error", err)
-	}
-
-	fmt.Printf("Retrieve returned %d\n", val)
+	log.Info("transaction invoking store was successfully included")
 }
